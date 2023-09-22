@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 
 if __name__ == '__main__':
-    dataloader = nju_cpol_dataloader.NjuCpolBaseDataset.dataloader(f'{dataset_cpol_dir}/KDP/1.0km', padding=True)
+    dataloader = nju_cpol_dataloader.NjuCpolBaseDataset.dataloader(f'{dataset_cpol_dir}', padding=True)
     pbar = tqdm(dataloader)
     for batch in pbar:
         print(batch.shape)
