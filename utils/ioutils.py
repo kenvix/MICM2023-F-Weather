@@ -1,10 +1,13 @@
 import os
+from typing import Tuple
 
 
-def count_files_recursive(path, file_only=True):
-    count = 0
+def count_files_recursive(path) -> Tuple[int, int]:
+    file_count = 0
+    directory_count = 0
     for root, dirs, files in os.walk(path):
-        for file in files:
-            if file_only and not os.path.isdir(os.path.join(root, file)):
-                count += 1
-    return count
+        file_count += len(files)
+        directory_count += len(dirs)
+    return file_count, directory_count
+
+
