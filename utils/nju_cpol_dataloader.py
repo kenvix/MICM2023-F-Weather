@@ -5,6 +5,7 @@ import torch
 from numpy import ndarray, dtype, generic
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+from . import interpolator_utils
 
 norm_param = {
     'dBZ': [0, 65],
@@ -79,7 +80,8 @@ class NjuCpolBaseDataset(Dataset):
 
 
 class NjuCpolFrameWindowedDataset(Dataset):
-    def __init__(self, data_dir, window_size_in=(2, 10), dim_list=None, sub_dir="1.0km", norm=True, device='cpu', **kwargs):
+    def __init__(self, data_dir, window_size_in=(2, 10), dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, device='cpu', **kwargs):
+        self.interpolator = interpolator
         if dim_list is None:
             dim_list = ['dBZ', 'KDP', 'ZDR']
         self.dim_list = dim_list
@@ -135,6 +137,8 @@ class NjuCpolFrameWindowedDataset(Dataset):
                 array = np.load(it_file)
                 if self.norm:
                     array = normalize_radar(array, target=self.dim_list[it_dim_idx])
+                if self.interpolator is not None:
+                    array = self.interpolator(array)
                 result_dim.append(array)
             results.append(np.stack(result_dim, axis=0))
 
@@ -147,18 +151,19 @@ class NjuCpolFrameWindowedDataset(Dataset):
         return torch.tensor(results, device=self.device)
 
     @staticmethod
-    def dataloader(data_dir, dim='dBZ', sub_dir="1.0km", norm=True, batch_size=16, window_size=(2, 10), shuffle=True,
+    def dataloader(data_dir, dim='dBZ', sub_dir="1.0km", norm=True, interpolator=None, batch_size=16, window_size=(2, 10), shuffle=True,
                    device='cpu', loader_args=None, **kwargs) -> DataLoader:
         if loader_args is None:
             loader_args = {}
-        dataset = NjuCpolFrameWindowedDataset(data_dir, dim=dim, window_size_in=window_size, sub_dir=sub_dir,
+        dataset = NjuCpolFrameWindowedDataset(data_dir, dim=dim, window_size_in=window_size, sub_dir=sub_dir, interpolator=interpolator,
                                               device=device, norm=norm, **kwargs)
         return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, **loader_args)
 
 
 class NjuCpolCoupledDataset(Dataset):
-    def __init__(self, data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, device='cpu',
+    def __init__(self, data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, device='cpu',
                  **kwargs):
+        self.interpolator = interpolator
         self.norm = norm
         self.label_dir = label_dir
         self.sub_dir = sub_dir
@@ -206,15 +211,18 @@ class NjuCpolCoupledDataset(Dataset):
         if self.norm:
             for i in range(len(self.dim_list)):
                 results[i] = normalize_radar(results[i], target=self.dim_list[i])
+        if self.interpolator is not None:
+            for i in range(len(self.dim_list)):
+                results[i] = self.interpolator(results[i])
         v = np.stack(results[1:], axis=0)
         return torch.tensor(results[0], device=self.device), torch.tensor(v, device=self.device)
 
     @staticmethod
-    def dataloader(data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, batch_size=16,
+    def dataloader(data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, batch_size=16,
                    shuffle=True, device='cpu', loader_args=None, **kwargs) -> DataLoader:
         if loader_args is None:
             loader_args = {}
-        dataset = NjuCpolCoupledDataset(data_dir, label_dir=label_dir, dim_list=dim_list, sub_dir=sub_dir,
+        dataset = NjuCpolCoupledDataset(data_dir, label_dir=label_dir, dim_list=dim_list, sub_dir=sub_dir, interpolator=interpolator,
                                         device=device, norm=norm, **kwargs)
         return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, **loader_args)
 

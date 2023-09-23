@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import Rbf
+from scipy import interpolate
+from scipy.interpolate import NearestNDInterpolator
 
 # Load the .npy file
 data = np.load('./dataset/data_dir_000/frame_000.npy')
@@ -10,34 +11,29 @@ plt.imshow(data, cmap='Blues')
 plt.colorbar()
 plt.show()
 
-# 找到缺失值的位置
-missing_mask = (data == 0)
 
-# 获取缺失值的坐标和数值
-missing_coords = np.argwhere(missing_mask)
-missing_values = data[missing_mask]
+def fill_zeros(matrix):
+    # Get the indices of the 0 values in the matrix
+    zero_indices = np.argwhere(matrix == 0)
 
-# 判断 0 值是否需要填充
-for i in range(len(data)):
-    for j in range(len(data[0])):
-        if data[i][j] == 0 and ((i > 0 and data[i-1][j] != 0) or (i < len(data)-1 and data[i+1][j] != 0) or
-                                (j > 0 and data[i][j-1] != 0) or (j < len(data[0])-1 and data[i][j+1] != 0)):
-            missing_mask[i][j] = True
-        else:
-            missing_mask[i][j] = False
+    # Get the indices of the non-zero values in the matrix
+    non_zero_indices = np.argwhere(matrix != 0)
 
-# 获取非缺失值的坐标和数值
-non_missing_coords = np.argwhere(~missing_mask)
-non_missing_values = data[~missing_mask]
+    # Get the non-zero values in the matrix
+    non_zero_values = matrix[non_zero_indices[:, 0], non_zero_indices[:, 1]]
 
-# 使用 RBF 插值填充缺失值
-rbf = Rbf(non_missing_coords[:, 0], non_missing_coords[:, 1], non_missing_values, function='multiquadric')
-filled_values = rbf(missing_coords[:, 0], missing_coords[:, 1])
+    # Create a nearest-neighbor interpolator using the non-zero values
+    interpolator = NearestNDInterpolator(non_zero_indices, non_zero_values)
 
-# 将填充后的数值放回原始数据中
-data[missing_mask] = filled_values
+    for i, j in zero_indices:
+        if i > 0 and i < matrix.shape[0] - 1 and j > 0 and j < matrix.shape[1] - 1:
+            if (matrix[i - 1, j] != 0 and matrix[i + 1, j]) != 0 or (matrix[i, j - 1] != 0 and matrix[i, j + 1] != 0):
+                matrix[i, j] = interpolator([i, j])
 
-plt.imshow(data, cmap='Blues')
+    return matrix
+
+
+plt.imshow(fill_zeros(data), cmap='Blues')
 # plt.gca().invert_yaxis()
 plt.colorbar()
 plt.show()
