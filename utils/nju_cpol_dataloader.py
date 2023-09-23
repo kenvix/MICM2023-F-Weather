@@ -1,7 +1,8 @@
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 import torch
+from numpy import ndarray, dtype, generic
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
@@ -82,6 +83,7 @@ class NjuCpolFrameWindowedDataset(Dataset):
         if dim_list is None:
             dim_list = ['dBZ', 'KDP', 'ZDR']
         self.dim_list = dim_list
+        self.dim_list_poped = self.dim_list[1:]
         self.norm = norm
         self.sub_dir = sub_dir
         self.data_dir = data_dir
@@ -110,18 +112,39 @@ class NjuCpolFrameWindowedDataset(Dataset):
             directory_count += len(dirs)
             window = len(files) - self.window_size_per_dim + 1
             self.total_length += window
+            dir_name = os.path.basename(root)
             for i in range(window):
-                self.item_list.append([os.path.join(root, files[j]) for j in range(i, i + self.window_size_per_dim)])
+                dim_data = [
+                    [os.path.join(root, files[j]) for j in range(i, i + self.window_size_per_dim)],
+                    *([os.path.join(root, "..", "..", "..", dim, sub_dir, dir_name, files[j]) for j in range(i, i + self.window_size_per_dim)] for dim in self.dim_list_poped)
+                ]
+                self.item_list.append(dim_data)
 
         self.file_count = file_count
 
     def __len__(self) -> int:
-        return len(self.item_list)
+        return len(self.item_list) - self.window_size + 1
+
+    def _getitem_single(self, idx) -> ndarray[Any, dtype[generic | generic | Any]]:
+        results = []
+        path_list = self.item_list[idx]
+        for it_dim_idx in range(len(self.item_list[idx])):
+            it_dim = path_list[it_dim_idx]
+            result_dim = []
+            for it_file in it_dim:
+                array = np.load(it_file)
+                if self.norm:
+                    array = normalize_radar(array, target=self.dim_list[it_dim_idx])
+                result_dim.append(array)
+            results.append(np.stack(result_dim, axis=0))
+
+        v = np.stack(results, axis=0)
+        return v
 
     def __getitem__(self, idx) -> torch.Tensor:
-        results = [np.load(it) for it in self.item_list[idx]]
-        v = np.stack(results, axis=0)
-        return torch.tensor(v, device=self.device)
+        v = [self._getitem_single(idx + i) for i in range(self.window_size)]
+        results = np.stack(v, axis=0)
+        return torch.tensor(results, device=self.device)
 
     @staticmethod
     def dataloader(data_dir, dim='dBZ', sub_dir="1.0km", norm=True, batch_size=16, window_size=(2, 10), shuffle=True,
