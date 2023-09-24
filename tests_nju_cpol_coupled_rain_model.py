@@ -17,7 +17,7 @@ from utils.nju_cpol_dataloader import NjuCpolCoupledDataset
 from utils.rain_model import QuantitativeRainModel
 
 
-def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='./log/rain', use_cache=True, loader_num_workers=96, pretrained=None):
+def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='./log/rain', use_cache=True, loader_num_workers=96, pretrained=None, visualize=False, test_only=False):
     # try:
     #     torch.multiprocessing.set_start_method('spawn')
     # except RuntimeError:
@@ -55,6 +55,7 @@ def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='
 
     if pretrained is not None:
         model.load_state_dict(torch.load(pretrained))
+        logger.info("Loaded pretrained model from {}".format(pretrained))
 
     for epoch in range(epoch_num):
         pbar = tqdm(dataloader_train, desc='Train')
