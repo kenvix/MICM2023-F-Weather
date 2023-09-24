@@ -24,7 +24,8 @@ class QuantitativeRainModel(torch.nn.Module):
         :param c:
         :return:
         """
-        return a * torch.log10(torch.nn.functional.relu(x[:, 0]) + 1) + b * x[:, 1] + c
+        # return a * torch.log10(torch.nn.functional.relu(x[:, 0]) + 1) + b * x[:, 1] + c
+        return torch.mul(torch.log10(torch.nn.functional.relu(x[:, 0]) + 1), a) + torch.mul(x[:, 1], b) + c
 
     @staticmethod
     def loss_of(y, y_pred):

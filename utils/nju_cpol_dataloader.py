@@ -160,8 +160,9 @@ class NjuCpolFrameWindowedDataset(Dataset):
 
 
 class NjuCpolCoupledDataset(Dataset):
-    def __init__(self, data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, device='cpu',
+    def __init__(self, data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, device='cpu', use_cache=False,
                  **kwargs):
+        self.use_cache = use_cache
         self.interpolator = interpolator
         self.norm = norm
         self.label_dir = label_dir
@@ -222,12 +223,15 @@ class NjuCpolCoupledDataset(Dataset):
                 for i in range(len(self.dim_list)):
                     results[i] = self.interpolator(results[i])
             v = np.stack(results[1:], axis=0)
-            ret = (torch.tensor(results[0], device=self.device), torch.tensor(v, device=self.device))
-            self.dataloader_cache[idx] = ret
+            if self.use_cache:
+                ret = (torch.tensor(results[0], device='cpu'), torch.tensor(v, device='cpu'))
+                self.dataloader_cache[idx] = ret
+                return tuple(it.clone().to(self.device) for it in ret)
+            else:
+                return torch.tensor(results[0], device=self.device), torch.tensor(v, device=self.device)
         else:
-            ret = (it.clone() for it in self.dataloader_cache[idx])
-
-        return ret
+            ret = (it.clone().to(self.device) for it in self.dataloader_cache[idx])
+            return tuple(ret)
 
     @staticmethod
     def dataloader(data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, batch_size=16,
