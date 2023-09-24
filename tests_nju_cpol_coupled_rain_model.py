@@ -17,7 +17,7 @@ from utils.nju_cpol_dataloader import NjuCpolCoupledDataset
 from utils.rain_model import QuantitativeRainModel
 
 
-def _entry(epoch_num=10000, device='cpu', batch_size=64, log_dir_rain='./log/rain', use_cache=True, loader_num_workers=96):
+def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='./log/rain', use_cache=True, loader_num_workers=96, pretrained=None):
     # try:
     #     torch.multiprocessing.set_start_method('spawn')
     # except RuntimeError:
@@ -47,10 +47,14 @@ def _entry(epoch_num=10000, device='cpu', batch_size=64, log_dir_rain='./log/rai
     model = QuantitativeRainModel(vector_length=65536, device=device)
 
     # Define the optimizer to use for training
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = torch.nn.MSELoss()
     dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True,
                                   num_workers=loader_num_workers)
+    dataloader_test = DataLoader(dataset_test, batch_size=batch_size, shuffle=True, num_workers=loader_num_workers)
+
+    if pretrained is not None:
+        model.load_state_dict(torch.load(pretrained))
 
     for epoch in range(epoch_num):
         pbar = tqdm(dataloader_train, desc='Train')
@@ -85,9 +89,8 @@ def _entry(epoch_num=10000, device='cpu', batch_size=64, log_dir_rain='./log/rai
             batch_index += 1
         pbar.close()
 
-        if epoch % 5 == 0:
+        if epoch % 6 == 5:
             model.eval()
-            dataloader_test = DataLoader(dataset_test, batch_size=batch_size, shuffle=True, num_workers=loader_num_workers)
             pbar = tqdm(dataloader_test, desc='Test')
             batch_index = 0
             loss = 0
