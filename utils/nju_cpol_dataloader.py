@@ -1,5 +1,5 @@
 import os
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Dict
 
 import torch
 from numpy import ndarray, dtype, generic
@@ -12,7 +12,6 @@ norm_param = {
     'ZDR': [-1, 5],
     'KDP': [-1, 6]
 }
-
 
 def normalize_radar(x: np.ndarray, target='dBZ'):
     mmin, mmax = norm_param[target]
@@ -127,7 +126,7 @@ class NjuCpolFrameWindowedDataset(Dataset):
     def __len__(self) -> int:
         return len(self.item_list) - self.window_size + 1
 
-    def _getitem_single(self, idx) -> ndarray[Any, dtype[generic | generic | Any]]:
+    def _getitem_single(self, idx):
         results = []
         path_list = self.item_list[idx]
         for it_dim_idx in range(len(self.item_list[idx])):
@@ -191,6 +190,8 @@ class NjuCpolCoupledDataset(Dataset):
         directory_count = 0
         self.total_length = 0
         self.item_list = []
+        self.dataloader_cache: Dict[int, Any] = {}
+
         for root, dirs, files in os.walk(label_path):
             file_count += len(files)
             directory_count += len(dirs)
@@ -207,15 +208,26 @@ class NjuCpolCoupledDataset(Dataset):
         return len(self.item_list)
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, torch.Tensor]:
-        results = [np.load(it) for it in self.item_list[idx]]
-        if self.norm:
-            for i in range(len(self.dim_list)):
-                results[i] = normalize_radar(results[i], target=self.dim_list[i])
-        if self.interpolator is not None:
-            for i in range(len(self.dim_list)):
-                results[i] = self.interpolator(results[i])
-        v = np.stack(results[1:], axis=0)
-        return torch.tensor(results[0], device=self.device), torch.tensor(v, device=self.device)
+        """
+
+        :param idx:
+        :return: label, [dBZ, ZDR]
+        """
+        if idx not in self.dataloader_cache:
+            results = [np.load(it) for it in self.item_list[idx]]
+            if self.norm:
+                for i in range(len(self.dim_list)):
+                    results[i] = normalize_radar(results[i], target=self.dim_list[i])
+            if self.interpolator is not None:
+                for i in range(len(self.dim_list)):
+                    results[i] = self.interpolator(results[i])
+            v = np.stack(results[1:], axis=0)
+            ret = (torch.tensor(results[0], device=self.device), torch.tensor(v, device=self.device))
+            self.dataloader_cache[idx] = ret
+        else:
+            ret = (it.clone() for it in self.dataloader_cache[idx])
+
+        return ret
 
     @staticmethod
     def dataloader(data_dir, label_dir="kdp-rain", dim_list=None, sub_dir="1.0km", norm=True, interpolator=None, batch_size=16,
