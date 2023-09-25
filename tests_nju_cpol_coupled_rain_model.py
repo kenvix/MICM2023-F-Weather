@@ -34,7 +34,7 @@ def visualize_array(data_groundtruth, save=None, file=None):
 
 
 def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='./log/rain', use_cache=True,
-           loader_num_workers=96, pretrained=None, visualize=False, test_only=False):
+           loader_num_workers=96, sub_dir="1.0km", pretrained=None, visualize=False, test_only=False):
     # try:
     #     torch.multiprocessing.set_start_method('spawn')
     # except RuntimeError:
@@ -48,18 +48,25 @@ def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='
     log_dir = os.path.join(log_dir_rain, current_time)
     model_save_dir = os.path.join(log_dir, 'model')
 
-    writer = SummaryWriter(log_dir)
-
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
+
+    fo = open(f"{log_dir}/info-lr_{lr}-sub_{sub_dir}", "w")
+    fo.write("1")
+    fo.close()
+
+    writer = SummaryWriter(log_dir)
+    
     if not os.path.exists(model_save_dir):
         os.makedirs(model_save_dir)
 
     dataset_train = NjuCpolCoupledDataset(dataset_cpol_dir_train, batch_size=batch_size, use_cache=use_cache,
                                           device=device,
+                                          sub_dir=sub_dir,
                                           interpolator=interpolator_utils.nearest_zero)
     dataset_test = NjuCpolCoupledDataset(dataset_cpol_dir_test, batch_size=batch_size, use_cache=use_cache,
                                          device=device,
+                                         sub_dir=sub_dir,
                                          interpolator=interpolator_utils.nearest_zero)
 
     # Train the model to fit the data and solve for the unknown parameters
@@ -149,13 +156,13 @@ def _entry(epoch_num=10000, device='cpu', batch_size=64, lr=0.01, log_dir_rain='
                         visualize_array(y_pred[bi].reshape(256, 256).cpu().detach().numpy(), save=log_dir + "/test_ln_y_pred_visual", file=f'{epoch}_{batch_index}_{bi}.svg')
                         visualize_array(y_flatten[bi].reshape(256, 256).cpu().detach().numpy(), save=log_dir + "/test_ln_y_actual_visual", file=f'{epoch}_{batch_index}_{bi}.svg')
 
-                    y_pred_visual = torch.pow(y_pred, 10) - 1
+                    y_pred_visual = torch.pow(10, y_pred) - 1
                     y_pred_visual = y_pred_visual.reshape(current_batch_size, 1, 256, 256)
                     y_actual_visual = y_flatten_exp.reshape(current_batch_size, 1, 256, 256)
 
                     for bi in range(len(y_pred_visual)):
-                        visualize_array(y_pred_visual[0].reshape(256, 256).cpu().detach().numpy(), save=log_dir + "/test_y_pred_visual", file=f'{epoch}_{batch_index}_{bi}.svg')
-                        visualize_array(y_actual_visual[0].reshape(256, 256).cpu().detach().numpy(), save=log_dir + "/test_y_actual_visual", file=f'{epoch}_{batch_index}_{bi}.svg')
+                        visualize_array(y_pred_visual[bi].reshape(256, 256).cpu().detach().numpy(), save=log_dir + "/test_y_pred_visual", file=f'{epoch}_{batch_index}_{bi}.svg')
+                        visualize_array(y_actual_visual[bi].reshape(256, 256).cpu().detach().numpy(), save=log_dir + "/test_y_actual_visual", file=f'{epoch}_{batch_index}_{bi}.svg')
 
                     writer.add_images('test_y_pred_visual', y_pred_visual, epoch * len(dataloader_test) + batch_index)
                     writer.add_images('test_y_actual_visual', y_actual_visual,
