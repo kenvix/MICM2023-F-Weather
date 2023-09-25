@@ -81,10 +81,25 @@ trainer = Trainer(
     max_epochs=10,
     callbacks=[model_checkpoint],
     precision=32,
+    resume_from_checkpoint="\\\\192.168.0.97\\数学建模\\GDMR\\1.km\\epoch=1-step=10500.ckpt",
     accelerator="auto", devices=1
 )
 model = DGMR(input_channels=1,forecast_steps=4,output_shape=256,latent_channels = 384*2,
         context_channels = 384,num_samples=6)
-model.train()
-datamodule = DGMRDataModule()
-trainer.fit(model, datamodule)
+
+def _entry(mode='test'):
+    if mode == 'test':
+        model.eval()
+        datamodule = DGMRDataModule()
+
+        batch_size = batch.shape[0]
+        windowsize = 4
+        input_channels = 1
+        data = torch.as_tensor(batch, dtype=torch.float32).resize(2, batch_size, windowsize, 1, 256, 256)
+        images, future_images = data[0, :, :,0, :, :], data[1, :, :,0, :, :]
+        images = images.resize(batch_size,windowsize,input_channels,256,256)
+        future_images =  future_images.resize(batch_size,windowsize,input_channels,256,256)
+    else:
+        model.train()
+        datamodule = DGMRDataModule()
+        trainer.fit(model, datamodule)

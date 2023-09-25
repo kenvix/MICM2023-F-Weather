@@ -104,6 +104,7 @@ class DGMR(pl.LightningModule, NowcastingModelHubMixin):
             context_channels=self.context_channels,
         )
         self.generator = Generator(self.conditioning_stack, self.latent_stack, self.sampler)
+
         self.discriminator = Discriminator(input_channels)
         self.save_hyperparameters()
 
@@ -118,9 +119,16 @@ class DGMR(pl.LightningModule, NowcastingModelHubMixin):
         return x
 
     def training_step(self, batch, batch_idx):
-        images, future_images = batch
-        images = images.float()
-        future_images = future_images.float()
+        batch_size = batch.shape[0]
+        windowsize = 4
+        input_channels = 1
+
+        data = torch.as_tensor(batch, dtype=torch.float32).resize(2, batch_size, windowsize, 1, 256, 256)
+        images, future_images = data[0, :, :, 0, :, :], data[1, :, :, 0, :, :]
+        images = images.resize(batch_size, windowsize, input_channels, 256, 256)
+        future_images = future_images.resize(batch_size, windowsize, input_channels, 256, 256)
+
+
         self.global_iteration += 1
         g_opt, d_opt = self.optimizers()
         ##########################
@@ -130,6 +138,8 @@ class DGMR(pl.LightningModule, NowcastingModelHubMixin):
         for _ in range(2):
             d_opt.zero_grad()
             predictions = self(images)
+
+
             # Cat along time dimension [B, T, C, H, W]
             generated_sequence = torch.cat([images, predictions], dim=1)
             real_sequence = torch.cat([images, future_images], dim=1)
@@ -149,6 +159,7 @@ class DGMR(pl.LightningModule, NowcastingModelHubMixin):
                 score_generated_spatial, score_real_spatial
             ) + loss_hinge_disc(score_generated_temporal, score_real_temporal)
             self.manual_backward(discriminator_loss)
+
             d_opt.step()
 
         ######################
@@ -194,9 +205,15 @@ class DGMR(pl.LightningModule, NowcastingModelHubMixin):
             )
 
     def validation_step(self, batch, batch_idx):
-        images, future_images = batch
-        images = images.float()
-        future_images = future_images.float()
+        batch_size = batch.shape[0]
+        windowsize = 4
+        input_channels = 1
+        data = torch.as_tensor(batch, dtype=torch.float32).resize(2, batch_size, windowsize, 1, 256, 256)
+        images, future_images = data[0, :, :,0, :, :], data[1, :, :,0, :, :]
+        images = images.resize(batch_size,windowsize,input_channels,256,256)
+        future_images =  future_images.resize(batch_size,windowsize,input_channels,256,256)
+        #images, future_images = batch
+
         ##########################
         # Optimize Discriminator #
         ##########################
