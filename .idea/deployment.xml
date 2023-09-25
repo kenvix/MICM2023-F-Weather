@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="DS408" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+    <option name="confirmBeforeUploading" value="false" />
+    <serverData>
+      <paths name="DS408">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/MICM2023-F-Weather" local="$PROJECT_DIR$" web="/MICM2023-F-Weather" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="吴钊">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/XB-pro/M" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

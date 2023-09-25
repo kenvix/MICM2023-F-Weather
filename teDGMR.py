@@ -5,9 +5,9 @@ from tqdm import tqdm
 import torch.nn as nn
 def train1():
     ataset_cpol_dir_train = r'./datasets/NJU_CPOL_update2308'
-    dataset_cpol_dir_test = r'./datasets/NJU_CPOL_update2308_test'
+    dataset_cpol_dir_test = r'F:\LX\Datasets\NJU_CPOL_update2308-vvvv'
 
-    ckpt_path = ''
+    ckpt_path = r"\\192.168.0.97\数学建模\GDMR\1.km\epoch=1-step=10500.ckpt"
 
     batch_size = 2
     channels = 1
@@ -21,7 +21,8 @@ def train1():
     model = DGMR(input_channels=1, forecast_steps=4, output_shape=256, latent_channels=384 * 2,
                  context_channels=384, num_samples=6)
 
-    model.load_state_dict(ckpt_path)
+    state_dict = torch.load(ckpt_path)
+    model.load_state_dict(state_dict)
 
     pbar = tqdm(dataloader_test)
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="980edb2e-4d53-473a-98dd-28600febe623" name="DS408">
+        <fileTransfer rootFolder="/nashome/kenvix/Work-Station" accessType="SFTP" host="172.29.1.85" port="408" sshConfigId="3b39c315-c14d-47ec-991b-32f0b524eb74" sshConfig="kenvix@172.29.1.85:408 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="60000" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+      <webServer id="c947bf78-dcd9-42fe-a679-b98aad1eb9cd" name="吴钊">
+        <fileTransfer rootFolder="/home/wuzhao" accessType="SFTP" host="10.131.196.228" port="22" sshConfigId="0511f312-7aaf-4a57-9bd3-6a66ff36b245" sshConfig="wuzhao@10.131.196.228:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
